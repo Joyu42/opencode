@@ -2,10 +2,12 @@
 
 mcp：
 |名称|描述|
+|-------|-------|
 |context7|获取最新官方文档|
 
 skills：
 |名称|描述|
+|-------|-------|
 |arxiv|学术论文检索|
 |cc-insights|代码分析洞察|
 |chinese-quote-converter|中文引号转换|
