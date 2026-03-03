@@ -292,4 +292,211 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
 
 ---
 
+## 8. 从零复刻本配置
+
+### 前置条件
+
+| 依赖 | 用途 | 安装 |
+|------|------|------|
+| 现代终端 | Kitty / Ghostty / WezTerm 等 | — |
+| GitHub Copilot 订阅 | 提供 Claude / GPT / Gemini 模型 | [github.com/features/copilot](https://github.com/features/copilot) |
+| MiniMax Coding Plan | 提供 M2.5 模型 + MCP 工具 | [platform.minimaxi.com](https://platform.minimaxi.com)（国内） |
+| uv (Python 包管理器) | 运行 MiniMax MCP Server | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| Node.js 或 Bun | 安装插件 | — |
+
+### Step 1：安装 OpenCode
+
+```bash
+# 推荐：一键安装脚本
+curl -fsSL https://opencode.ai/install | bash
+
+# 或 npm
+npm install -g opencode-ai
+
+# 或 Homebrew (macOS/Linux)
+brew install anomalyco/tap/opencode
+
+# 验证
+opencode --version
+```
+
+### Step 2：Clone 配置仓库
+
+本仓库包含 skills、commands、instructions、oh-my-opencode.json 等，**不含密钥文件**。
+
+```bash
+# 备份已有配置（如有）
+mv ~/.config/opencode ~/.config/opencode.bak 2>/dev/null
+
+# Clone
+git clone https://github.com/Joyu42/opencode.git ~/.config/opencode
+```
+
+Clone 后目录结构：
+
+```
+~/.config/opencode/
+├── oh-my-opencode.json        # ✅ Agent/Category 配置（已含）
+├── instructions/language.md    # ✅ 中文指令（已含）
+├── command/                    # ✅ 自定义命令（已含）
+├── skills/                     # ✅ 15 个技能包（已含）
+├── README.md                   # ✅ 本文件（已含）
+├── opencode.json               # ❌ 需手动创建（含密钥，不入库）
+└── supermemory.jsonc            # ❌ 需手动创建（含密钥，不入库）
+```
+
+### Step 3：安装 Oh My OpenCode 插件
+
+```bash
+# 推荐方式：交互式安装器（会引导配置订阅）
+bunx oh-my-opencode install
+
+# 或 npm 全局安装
+npm install -g oh-my-opencode
+```
+
+安装器会询问你的订阅情况（Copilot / Claude / ChatGPT），并自动写入 `opencode.json` 的 `plugin` 字段。
+
+如果你已经 clone 了仓库且 `oh-my-opencode.json` 已存在，只需确保 `opencode.json` 的 `plugin` 数组包含 `"oh-my-opencode@latest"`。
+
+### Step 4：安装 Supermemory 插件
+
+1. 注册并获取 API Key：[console.supermemory.ai](https://console.supermemory.ai)（需 Pro 计划）
+
+2. 设置环境变量（可选，也可写在配置文件里）：
+
+```bash
+# 添加到 ~/.bashrc 或 ~/.zshrc
+export SUPERMEMORY_API_KEY="sm_你的密钥"
+```
+
+3. 安装插件：
+
+```bash
+bunx opencode-supermemory@latest install --no-tui
+```
+
+4. 创建 `~/.config/opencode/supermemory.jsonc`：
+
+```jsonc
+{
+  "apiKey": "sm_你的密钥",
+  "similarityThreshold": 0.6,
+  "maxMemories": 5,
+  "compactionThreshold": 0.80
+}
+```
+
+> **重要**：使用 Supermemory 需禁用 `anthropic-context-window-limit-recovery` Hook，`oh-my-opencode.json` 中已配置。
+
+### Step 5：创建 opencode.json（主配置）
+
+此文件含密钥，不入库，需手动创建：
+
+```bash
+cat > ~/.config/opencode/opencode.json << 'EOF'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "~/.config/opencode/instructions/language.md"
+  ],
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "你的Context7 Key"
+      },
+      "enabled": true
+    },
+    "MiniMax": {
+      "type": "local",
+      "command": ["uvx", "minimax-coding-plan-mcp", "-y"],
+      "environment": {
+        "MINIMAX_API_KEY": "你的MiniMax Key",
+        "MINIMAX_API_HOST": "https://api.minimaxi.com"
+      },
+      "enabled": true
+    }
+  },
+  "plugin": [
+    "oh-my-opencode@latest",
+    "opencode-supermemory@latest"
+  ]
+}
+EOF
+```
+
+**获取各 API Key**：
+
+| Key | 获取地址 |
+|-----|---------|
+| Context7 | [context7.com](https://context7.com) 注册后获取（免费） |
+| MiniMax (国内) | [platform.minimaxi.com](https://platform.minimaxi.com) → API 密钥 |
+| MiniMax (海外) | [minimax.io](https://minimax.io)（API Host 改为 `https://api.minimax.io`） |
+
+### Step 6：认证模型提供商
+
+```bash
+# 启动 OpenCode
+opencode
+
+# 在 TUI 中使用 /connect 连接 GitHub Copilot
+# 按提示完成 OAuth 认证
+
+# 连接 MiniMax（如使用 minimax-cn provider）
+# 在 TUI 中 /connect → 选择 MiniMax → 输入 API Key
+```
+
+认证信息保存在 `~/.local/share/opencode/auth.json`。
+
+### Step 7：验证安装
+
+```bash
+opencode
+```
+
+进入 TUI 后检查：
+
+- 输入 `ulw 你好` → Sisyphus 应以中文回复
+- 检查 Agent 列表：应能看到 Sisyphus、Oracle、Prometheus 等
+- MiniMax MCP 工具：web_search 和 understand_image 应可用
+
+### 安装流程图
+
+```
+1. 安装 OpenCode CLI
+   ↓
+2. Clone 配置仓库 → ~/.config/opencode/
+   （获得 skills, commands, oh-my-opencode.json, instructions）
+   ↓
+3. bunx oh-my-opencode install
+   （安装 OhMyOpenCode 插件）
+   ↓
+4. bunx opencode-supermemory@latest install
+   （安装 Supermemory 插件 + 创建 supermemory.jsonc）
+   ↓
+5. 手动创建 opencode.json
+   （填入 Context7 / MiniMax API Key，声明插件和 MCP）
+   ↓
+6. opencode → /connect 认证 Copilot / MiniMax
+   ↓
+7. 开始使用 ✅
+```
+
+---
+
+## 7. 相关链接
+
+- [OpenCode 官方文档](https://opencode.ai/docs/config/)
+- [OhMyOpenCode 官方文档](https://ohmyopencode.com/documentation/)
+- [OhMyOpenCode GitHub](https://github.com/code-yeongyu/oh-my-opencode)
+- [MiniMax Coding Plan MCP](https://github.com/MiniMax-AI/MiniMax-Coding-Plan-MCP)
+- [MiniMax 平台（国内）](https://platform.minimaxi.com)
+- [Supermemory 官方文档](https://supermemory.ai/docs/integrations/opencode)
+- [Supermemory Console](https://console.supermemory.ai)
+- [Context7 MCP](https://mcp.context7.com)
+
+---
+
 *更新日期：2026-03-04*
