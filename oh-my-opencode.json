@@ -23,12 +23,10 @@
       "variant": "max"
     },
     "metis": {
-      "model": "minimax-cn/MiniMax-M2.5",
-      "variant": "max"
+      "model": "minimax-cn/MiniMax-M2.5"
     },
     "momus": {
-      "model": "minimax-cn/MiniMax-M2.5",
-      "variant": "medium"
+      "model": "minimax-cn/MiniMax-M2.5"
     },
     "atlas": {
       "model": "minimax-cn/MiniMax-M2.5"
