@@ -341,18 +341,16 @@ Clone 后目录结构：
 ├── command/                    # ✅ 自定义命令（已含）
 ├── skills/                     # ✅ 15 个技能包（已含）
 ├── README.md                   # ✅ 本文件（已含）
-├── opencode.json               # ❌ 需手动创建（含密钥，不入库）
-└── supermemory.jsonc            # ❌ 需手动创建（含密钥，不入库）
+├── opencode.json               # ❌ 自动创建或手动创建（含密钥，不入库）
+└── supermemory.jsonc            # ❌ 插件自动创建需手动创建（含密钥，不入库）
 ```
 
 ### Step 3：安装 Oh My OpenCode 插件
 
-```bash
-# 推荐方式：交互式安装器（会引导配置订阅）
-bunx oh-my-opencode install
-
-# 或 npm 全局安装
-npm install -g oh-my-opencode
+```markdown
+# 推荐方式：交互式安装器（会引导配置订阅）Copy and paste this prompt to your LLM agent (Claude Code, AmpCode, Cursor, etc.):
+Install and configure oh-my-opencode by following the instructions here:
+https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 
 安装器会询问你的订阅情况（Copilot / Claude / ChatGPT），并自动写入 `opencode.json` 的 `plugin` 字段。
@@ -372,11 +370,12 @@ export SUPERMEMORY_API_KEY="sm_你的密钥"
 
 3. 安装插件：
 
-```bash
-bunx opencode-supermemory@latest install --no-tui
+```markdown
+# let your agent do it - paste this into OpenCode:
+Install opencode-supermemory by following https://raw.githubusercontent.com/supermemoryai/opencode-supermemory/main/README.md
 ```
 
-4. 创建 `~/.config/opencode/supermemory.jsonc`：
+4. 创建 `~/.config/opencode/supermemory.jsonc`：（可选，插件可能自动创建）
 
 ```jsonc
 {
@@ -391,7 +390,7 @@ bunx opencode-supermemory@latest install --no-tui
 
 ### Step 5：创建 opencode.json（主配置）
 
-此文件含密钥，不入库，需手动创建：
+此文件含密钥，不入库：
 
 ```bash
 cat > ~/.config/opencode/opencode.json << 'EOF'
