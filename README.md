@@ -204,18 +204,69 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/dev/assets/oh-my-opencode.schema.json",
-  "disabled_hooks": ["anthropic-context-window-limit-recovery"],
   "agents": {
-    "sisyphus": { "model": "github-copilot/claude-opus-4.6", "variant": "max" },
-    "oracle": { "model": "github-copilot/gpt-5.2", "variant": "high" },
-    "explore": { "model": "minimax-cn/MiniMax-M2.5" },
-    "librarian": { "model": "minimax-cn/MiniMax-M2.5" }
+    "sisyphus": {
+      "model": "github-copilot/claude-opus-4.6",
+      "variant": "max"
+    },
+    "oracle": {
+      "model": "github-copilot/gpt-5.2",
+      "variant": "high"
+    },
+    "librarian": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    },
+    "explore": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    },
+    "multimodal-looker": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    },
+    "prometheus": {
+      "model": "github-copilot/claude-opus-4.6",
+      "variant": "max"
+    },
+    "metis": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    },
+    "momus": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    },
+    "atlas": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    }
   },
   "categories": {
-    "visual-engineering": { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
-    "quick": { "model": "minimax-cn/MiniMax-M2.5" }
-  }
+    "visual-engineering": {
+      "model": "github-copilot/gemini-3.1-pro-preview",
+      "variant": "high"
+    },
+    "ultrabrain": {
+      "model": "github-copilot/gemini-3.1-pro-preview",
+      "variant": "high"
+    },
+    "artistry": {
+      "model": "github-copilot/gemini-3.1-pro-preview",
+      "variant": "high"
+    },
+    "quick": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    },
+    "unspecified-low": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    },
+    "unspecified-high": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    },
+    "writing": {
+      "model": "minimax-cn/MiniMax-M2.5"
+    }
+  },
+  "disabled_hooks": [
+    "anthropic-context-window-limit-recovery"
+  ]
 }
+
 ```
 
 **Agent 配置项**：
@@ -336,7 +387,7 @@ Clone 后目录结构：
 
 ```
 ~/.config/opencode/
-├── oh-my-opencode.json        # ✅ Agent/Category 配置（已含）
+├── oh-my-opencode.json        # ❌ 插件自动创建手动修改Agent/Category 配置
 ├── instructions/language.md    # ✅ 中文指令（已含）
 ├── command/                    # ✅ 自定义命令（已含）
 ├── skills/                     # ✅ 15 个技能包（已含）
@@ -388,7 +439,7 @@ Install opencode-supermemory by following https://raw.githubusercontent.com/supe
 
 > **重要**：使用 Supermemory 需禁用 `anthropic-context-window-limit-recovery` Hook，`oh-my-opencode.json` 中已配置。
 
-### Step 5：创建 opencode.json（主配置）
+### Step 5： opencode.json（主配置）
 
 此文件含密钥，不入库：
 
@@ -467,10 +518,10 @@ opencode
 1. 安装 OpenCode CLI
    ↓
 2. Clone 配置仓库 → ~/.config/opencode/
-   （获得 skills, commands, oh-my-opencode.json, instructions）
+   （获得 skills, commands,instructions）
    ↓
 3. bunx oh-my-opencode install
-   （安装 OhMyOpenCode 插件）
+   （安装 OhMyOpenCode 插件 + oh-my-opencode.json）
    ↓
 4. bunx opencode-supermemory@latest install
    （安装 Supermemory 插件 + 创建 supermemory.jsonc）
