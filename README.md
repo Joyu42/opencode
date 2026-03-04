@@ -99,7 +99,7 @@ ulw 给这个项目加个暗黑模式
 
 | MCP | 类型 | 用途 |
 |-----|------|------|
-| **Context7** | remote | 获取最新官方库/框架文档 |
+| **Context7** | local | 获取最新官方库/框架文档 |
 | **MiniMax** | local | 网络搜索 + 图像分析 |
 
 ### Context7
@@ -159,10 +159,9 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
     "~/.config/opencode/instructions/language.md"
   ],
   "mcp": {
-    "context7": {
-      "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": { "CONTEXT7_API_KEY": "ctx7sk-..." },
+     "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
       "enabled": true
     },
     "MiniMax": {
@@ -452,11 +451,8 @@ cat > ~/.config/opencode/opencode.json << 'EOF'
   ],
   "mcp": {
     "context7": {
-      "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "你的Context7 Key"
-      },
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
       "enabled": true
     },
     "MiniMax": {
