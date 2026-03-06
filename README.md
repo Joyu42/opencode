@@ -1,99 +1,181 @@
 # OpenCode 个人配置指南
 
-## 配置文件总览
+## 插件体系概览
 
 ```
 ~/.config/opencode/
 ├── opencode.json              # 主配置（模型、MCP、插件）
-├── oh-my-opencode.json        # Agent / Category 模型分配
-├── supermemory.jsonc           # 持久记忆配置
-├── instructions/language.md    # 语言指令（中文 + Context7 规则）
-├── command/                    # 自定义斜杠命令
-├── skills/                     # 15 个技能包
-└── README.md                   # ← 本文件
+├── oh-my-opencode.json        # Agent / Category 模型分配（OhMyOpenCode）
+├── supermemory.jsonc          # 持久记忆配置（Supermemory）
+├── instructions/              # 语言指令
+├── command/                   # 自定义斜杠命令
+├── skills/                    # 技能包
+│   ├── superpowers/          # Superpowers 技能（14个）
+│   └── [其他技能]            # 用户技能
+└── README.md                  # ← 本文件
 ```
 
 ---
 
-## 1. 架构概览
+## 三大插件职责分工
+
+| 插件 | 职责 | 层面 | 触发方式 |
+|------|------|------|----------|
+| **OhMyOpenCode** | 任务编排、Agent调度、规划执行分离 | 架构层 | `@plan` / `/start-work` / `ulw` |
+| **Superpowers** | 开发纪律、TDD、代码审查、调试方法论 | 执行层 | 自动检测 + 手动加载 |
+| **Supermemory** | 长期记忆、学习代码风格、记住项目知识 | 知识层 | 自动运行 |
+
+### 协作流程
+
+```
+用户需求
+    ↓
+┌─────────────────────────────────────────────┐
+│  OhMyOpenCode (编排层)                      │
+│  @plan → Prometheus 规划 → /start-work     │
+└─────────────────────────────────────────────┘
+    ↓ 产出: 实施计划
+    ↓
+┌─────────────────────────────────────────────┐
+│  Superpowers (纪律层)                       │
+│  自动注入: brainstorming → TDD → 验证      │
+└─────────────────────────────────────────────┘
+    ↓ 执行具体任务
+    ↓
+┌─────────────────────────────────────────────┐
+│  Supermemory (知识层)                        │
+│  自动记住: 对话、偏好、项目知识              │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## 1. OhMyOpenCode - 任务编排
 
 ### Agent 体系
 
 | 角色 | Agent | 模型 | 用途 |
 |------|-------|------|------|
-| 指挥官 | Sisyphus | `copilot/claude-opus-4.6` | 主编排器，规划+委派 |
-| 战略规划 | Prometheus | `copilot/claude-opus-4.6` | 面试式需求分析 |
+| 指挥官 | Sisyphus | `copilot/gpt-5.2` | 主编排器，规划+委派 |
+| 战略规划 | Prometheus | `copilot/gpt-5.2` | 面试式需求分析 |
 | 军师 | Oracle | `copilot/gpt-5.2` | 架构咨询/疑难调试 |
 | 侦察兵 | Explore | `minimax/M2.5` | 搜索代码库 |
 | 侦察兵 | Librarian | `minimax/M2.5` | 搜索文档/开源 |
 | 参谋 | Metis | `minimax/M2.5` | 计划缺口分析 |
 | 参谋 | Momus | `minimax/M2.5` | 方案审查验证 |
 | 编排 | Atlas | `minimax/M2.5` | Todo 编排执行 |
-| 视觉 | Multimodal Looker | `minimax/M2.5` | 截图/图像分析 |
 
 ### Category（子任务分发）
 
 | Category | 模型 | 用途 |
 |----------|------|------|
-| visual-engineering | `copilot/gemini-3.1-pro` | 前端/UI/设计 |
-| ultrabrain | `copilot/gemini-3.1-pro` | 高难度逻辑 |
-| artistry | `copilot/gemini-3.1-pro` | 创意/非常规方案 |
+| visual-engineering | `gemini-3.1-pro` | 前端/UI/设计 |
+| ultrabrain | `gemini-3.1-pro` | 高难度逻辑 |
+| artistry | `gemini-3.1-pro` | 创意/非常规方案 |
 | quick | `minimax/M2.5` | 简单小改动 |
 | unspecified-low | `minimax/M2.5` | 一般任务 |
 | unspecified-high | `minimax/M2.5` | 较复杂任务 |
 | writing | `minimax/M2.5` | 文档写作 |
 
-### 设计原则
+### 使用方式
 
-- **Copilot 额度留给核心**：Sisyphus、Oracle、Prometheus
-- **MiniMax 承担大量工作**：搜索、检索、辅助分析、轻量执行（快且无限额）
-- **特殊任务走 Gemini**：前端/视觉/高难度推理
-
-### 执行流
-
-```
-你的输入
-   ↓
-[Sisyphus] 主编排 (Opus 4.6)
-   ├──→ [Explore/Librarian] ×N 并行搜索 (MiniMax) 🔄
-   ├──→ [Oracle] 架构咨询 (GPT-5.2) 💰
-   ├──→ [Metis/Momus] 计划分析 (MiniMax) 🔄
-   ├──→ [Prometheus] 战略规划 (Opus 4.6) 💰
-   └──→ [Category 子任务] 按类别分发
-         ├── quick / writing → MiniMax 🔄
-         └── visual / ultrabrain → Gemini 💰
-
-🔄 = MiniMax（快、无限额）  💰 = Copilot（有限额）
-```
+| 场景 | 命令 | 说明 |
+|------|------|------|
+| **懒人模式（Sisyphus）** | `ulw 添加暗黑模式` | 自动探索+执行 |
+| **精确规划（Prometheus）** | @plan→系列问答 → `/start-work` | Prometheus 规划 + Atlas 执行 |
+| **持续模式** | `/ulw-loop` | 自我循环直到完成 |
+| **深度架构** | 切换到 Hephaestus | GPT-5.3 Codex 推理 |
 
 ---
 
-## 2. 日常使用
+## 2. Superpowers - 开发纪律
 
-### 懒人模式（推荐 90% 场景）
+> 安装位置: `~/.config/opencode/superpowers`
+> 技能位置: `~/.config/opencode/skills/superpowers`
 
+### 14 个技能
+
+| 类别 | 技能 | 说明 |
+|------|------|------|
+| **测试** | test-driven-development | TDD 先写测试再写代码 |
+| **调试** | systematic-debugging | 系统化调试方法 |
+| **调试** | verification-before-completion | 完成后必须验证 |
+| **计划** | writing-plans | 编写实施计划 |
+| **计划** | executing-plans | 执行计划 |
+| **协作** | brainstorming | 创造性工作前必须头脑风暴 |
+| **协作** | requesting-code-review | 请求代码审查 |
+| **协作** | receiving-code-review | 接收代码审查反馈 |
+| **协作** | subagent-driven-development | 子代理驱动开发 |
+| **协作** | dispatching-parallel-agents | 并行代理分发 |
+| **Git** | using-git-worktrees | Git worktree 隔离开发 |
+| **Git** | finishing-a-development-branch | 完成开发分支 |
+| **元** | using-superpowers | 使用 superpowers 本身 |
+| **元** | writing-skills | 编写新技能 |
+
+### 使用方式
+
+**自动触发**: Superpowers 会自动检测任务类型并注入相关技能。
+
+**手动加载**:
 ```
-ulw 给这个项目加个暗黑模式
+use skill tool to load superpowers/brainstorming
+use skill tool to load superpowers/test-driven-development
 ```
 
-输入后 Sisyphus 自动探索代码库、搜文档、拆任务、并行执行、验证结果。
+### 核心原则
 
-### 精确模式（大项目/关键变更）
-
-1. 按 **Tab** → Prometheus 面试式需求分析
-2. 生成计划 → `/start-work` → Atlas 按计划执行
-
-### 持续模式
-
-```
-/ulw-loop
-```
-
-自我循环直到 100% 完成，适合大型重构。
+Superpowers 强制执行 **先思考，后行动**：
+1. 创造性工作前 → 必须 brainstorming
+2. 实现功能前 → 必须 TDD
+3. 完成任务前 → 必须 verification-before-completion
+4. 代码提交前 → 应该 requesting-code-review
 
 ---
 
-## 3. MCP 服务
+## 3. Supermemory - 长期记忆
+
+> 配置文件: `~/.config/opencode/supermemory.jsonc`
+> 需禁用 Hook: `anthropic-context-window-limit-recovery`
+
+### 功能
+
+- ✅ 自动记住对话内容
+- ✅ 学习代码风格偏好
+- ✅ 记录项目配置和架构
+- ✅ 跨会话记忆
+
+### 使用方式
+
+**完全自动运行**，无需手动触发。
+
+**手动添加记忆**:
+```bash
+# 添加项目级别记忆
+supermemory add "这个项目使用 PostgreSQL，不是 MySQL" --scope project --type project-config
+
+# 添加用户级别记忆（跨项目）
+supermemory add "我喜欢使用 TypeScript strict 模式" --scope user --type preference
+
+# 搜索记忆
+supermemory search "数据库"
+```
+
+### 配置 (supermemory.jsonc)
+
+```jsonc
+{
+  "apiKey": "sm_你的密钥",
+  "similarityThreshold": 0.6,    // 检索最小相似度
+  "maxMemories": 5,              // 每次注入的最大记忆数
+  "compactionThreshold": 0.80     // 触发压缩的上下文使用率
+}
+```
+
+从 [console.supermemory.ai](https://console.supermemory.ai) 获取 API Key。
+
+---
+
+## 4. MCP 服务
 
 ### 已配置的 MCP
 
@@ -106,49 +188,59 @@ ulw 给这个项目加个暗黑模式
 
 按需自动查询最新 API 文档，无需手动触发。
 
-### MiniMax Coding Plan MCP
+### MiniMax MCP
 
-MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
-
-| 工具 | 功能 | 参数 |
-|------|------|------|
-| `web_search` | 网络搜索，返回结构化结果 | `query`: 搜索关键词 |
-| `understand_image` | AI 图像分析 | `prompt`: 分析指令, `image_source`: 图片路径/URL |
-
-**典型场景**：
-- 搜索技术文档、库的使用方法、报错解决方案
-- 分析 UI 截图、架构图、流程图
-- 从图片中提取文字（OCR）
-
-**支持格式**：JPEG, PNG, WebP
-
-> **注意**：`web_search` 和 `understand_image` 需要有效的 MiniMax API Key 和 Coding Plan 订阅。
+| 工具 | 功能 |
+|------|------|
+| `web_search` | 网络搜索，返回结构化结果 |
+| `understand_image` | AI 图像分析 |
 
 ---
 
-## 4. 技能（Skills）
+## 5. 技能（Skills）
+
+### Superpowers 技能（14个）
 
 | 技能 | 说明 |
 |------|------|
-| `fetch4ai` | 网页内容抓取（带噪声过滤） |
-| `web-research` | 结构化网络调研 |
-| `arxiv` | 学术论文检索 |
-| `pdf` | PDF 读取/创建/合并/拆分 |
-| `docx` | Word 文档处理 |
-| `xlsx` | 电子表格处理 |
-| `pptx` | PowerPoint 处理 |
-| `md-to-docx` | Markdown 转 Word（支持中文排版） |
-| `markitdown` | 多格式转 Markdown |
-| `marp-slides-creator` | Marp 幻灯片制作 |
-| `frontend-design` | 前端界面设计 |
-| `cc-insights` | Claude Code 使用分析 |
-| `skill-creator` | 自定义技能开发 |
-| `command-development` | 斜杠命令开发 |
-| `chinese-quote-converter` | 英文引号转中文引号 |
+| brainstorming | 创造性工作前头脑风暴 |
+| test-driven-development | TDD 开发方法 |
+| systematic-debugging | 系统化调试 |
+| verification-before-completion | 完成后验证 |
+| writing-plans | 编写计划 |
+| executing-plans | 执行计划 |
+| requesting-code-review | 请求代码审查 |
+| receiving-code-review | 接收审查反馈 |
+| subagent-driven-development | 子代理驱动开发 |
+| dispatching-parallel-agents | 并行代理分发 |
+| using-git-worktrees | Git worktree 隔离 |
+| finishing-a-development-branch | 完成开发分支 |
+| using-superpowers | 使用 superpowers |
+| writing-skills | 编写新技能 |
+
+### 用户技能
+
+| 技能 | 说明 |
+|------|------|
+| fetch4ai | 网页内容抓取 |
+| web-research | 结构化网络调研 |
+| arxiv | 学术论文检索 |
+| pdf | PDF 处理 |
+| docx | Word 文档处理 |
+| xlsx | 电子表格处理 |
+| pptx | PowerPoint 处理 |
+| md-to-docx | Markdown 转 Word |
+| markitdown | 多格式转 Markdown |
+| marp-slides-creator | Marp 幻灯片 |
+| frontend-design | 前端界面设计 |
+| cc-insights | Claude Code 使用分析 |
+| skill-creator | 自定义技能开发 |
+| command-development | 斜杠命令开发 |
+| chinese-quote-converter | 英文引号转中文 |
 
 ---
 
-## 5. 配置详解
+## 6. 配置详解
 
 ### opencode.json（主配置）
 
@@ -159,7 +251,7 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
     "~/.config/opencode/instructions/language.md"
   ],
   "mcp": {
-     "context7": {
+    "context7": {
       "type": "local",
       "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
       "enabled": true
@@ -181,23 +273,6 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
 }
 ```
 
-**常用字段**：
-
-| 字段 | 说明 |
-|------|------|
-| `instructions` | 指令文件路径（支持 glob） |
-| `mcp` | MCP 服务器配置 |
-| `plugin` | 插件列表 |
-| `model` | 默认模型 `provider/model` |
-| `autoupdate` | 自动更新 `true`/`false`/`"notify"` |
-| `disabled_providers` | 禁用的模型提供商 |
-
-**MCP 类型**：
-- `remote`：远程 MCP（配置 `url` + 可选 `headers`）
-- `local`：本地进程（配置 `command` + 可选 `environment`）
-
-**变量替换**：`{env:VAR_NAME}` 引用环境变量，`{file:~/.secrets/key}` 引用文件内容
-
 ### oh-my-opencode.json（Agent 配置）
 
 ```json
@@ -205,34 +280,33 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/dev/assets/oh-my-opencode.schema.json",
   "agents": {
     "sisyphus": {
-      "model": "github-copilot/claude-opus-4.6",
-      "variant": "max"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "oracle": {
       "model": "github-copilot/gpt-5.2",
       "variant": "high"
     },
     "librarian": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "explore": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "multimodal-looker": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "prometheus": {
-      "model": "github-copilot/claude-opus-4.6",
-      "variant": "max"
+      "model": "github-copilot/gpt-5.2",
+      "variant": "high"
     },
     "metis": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "momus": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "atlas": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     }
   },
   "categories": {
@@ -249,16 +323,16 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
       "variant": "high"
     },
     "quick": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "unspecified-low": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "unspecified-high": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     },
     "writing": {
-      "model": "minimax-cn/MiniMax-M2.5"
+      "model": "minimax-cn-coding-plan/MiniMax-M2.5"
     }
   },
   "disabled_hooks": [
@@ -268,77 +342,20 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
 
 ```
 
-**Agent 配置项**：
-
-| 选项 | 说明 |
-|------|------|
-| `model` | 模型覆盖 `provider/model` |
-| `variant` | 变体: `max`, `xhigh`, `high`, `medium`, `low` |
-| `fallback_models` | API 失败时备用模型 |
-| `temperature` | 采样温度 (0-2) |
-| `prompt_append` | 追加系统提示词 |
-| `tools` | 工具白名单 `{ "toolname": true/false }` |
-| `disable` | 禁用此 Agent |
-
-**可禁用的 Hooks**（完整列表见 `disabled_hooks`）：
-
-| Hook | 说明 |
-|------|------|
-| `anthropic-context-window-limit-recovery` | Anthropic 上下文恢复（Supermemory 需禁用） |
-| `todo-continuation-enforcer` | Todo 继续强制器 |
-| `context-window-monitor` | 上下文窗口监控 |
-| `ralph-loop` | Ralph 循环 |
-| `think-mode` | 思考模式 |
-| `runtime-fallback` | 运行时回退 |
-
-### supermemory.jsonc（持久记忆）
-
-```jsonc
-{
-  "apiKey": "sm_...",
-  "similarityThreshold": 0.6,   // 检索最小相似度
-  "maxMemories": 5,             // 每次注入的最大记忆数
-  "compactionThreshold": 0.80   // 触发压缩的上下文使用率
-}
-```
-
-从 [console.supermemory.ai](https://console.supermemory.ai) 获取 API Key。
-
 ---
 
-## 6. 注意事项
+## 7. 使用场景对照表
 
-### MiniMax 表现良好的场景
-
-- **Explore / Librarian**：最佳位置，快且可大量并行
-- **quick / writing**：轻量任务绰绰有余
-- **Atlas**：Todo 编排相对简单
-
-### 可能需要关注的场景
-
-- **Metis / Momus**：深度分析偶尔不如 GPT，但大部分够用
-- **unspecified-high**：复杂任务质量不够可改回 `copilot/claude-sonnet-4.5`
-
-### 不可更改
-
-- **Sisyphus 必须用 Claude 家族**，换模型会严重退化
-- **Hephaestus 必须用 GPT-5.3 Codex**，专为 Codex 构建
-
-### 省额度技巧
-
-- 简单任务用 `ulw`，不走 Prometheus
-- 避免反复让 Oracle 解答同类问题
-
----
-
-## 7. 相关链接
-
-- [OpenCode 官方文档](https://opencode.ai/docs/config/)
-- [OhMyOpenCode GitHub](https://github.com/code-yeongyu/oh-my-opencode)
-- [MiniMax Coding Plan MCP](https://github.com/MiniMax-AI/MiniMax-Coding-Plan-MCP)
-- [MiniMax 平台](https://platform.minimaxi.com)
-- [Supermemory Console](https://console.supermemory.ai)
-- [Context7 MCP](https://mcp.context7.com)
+| 需求 | 推荐方式 | 涉及的插件 |
+|------|----------|------------|
+| 简单任务 | 直接输入 | Supermemory 记忆偏好 |
+| 复杂任务 | `ulw` | OhMyOpenCode + Superpowers |
+| 大项目规划 | `@plan` → `/start-work` | OhMyOpenCode 完整流程 |
+| 创造性工作 | 先 `skill load superpowers/brainstorming` | Superpowers |
+| 写测试 | 自动触发 TDD | Superpowers |
+| 调试问题 | 自动触发 systematic-debugging | Superpowers |
+| 记住项目知识 | 自动运行 | Supermemory |
+| 记住代码风格 | 自动运行 | Supermemory |
 
 ---
 
@@ -351,7 +368,7 @@ MiniMax 官方 MCP 服务器，为 Coding Plan 用户提供两个工具：
 | 现代终端 | Kitty / Ghostty / WezTerm 等 | — |
 | GitHub Copilot 订阅 | 提供 Claude / GPT / Gemini 模型 | [github.com/features/copilot](https://github.com/features/copilot) |
 | MiniMax Coding Plan | 提供 M2.5 模型 + MCP 工具 | [platform.minimaxi.com](https://platform.minimaxi.com)（国内） |
-| uv (Python 包管理器) | 运行 MiniMax MCP Server | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| uv (Python 包管理器) | 运行 MiniMax MCP Server | `curl -LsSf https://astral.sh/uv/install.sh | sh` |
 | Node.js 或 Bun | 安装插件 | — |
 
 ### Step 1：安装 OpenCode
@@ -372,8 +389,6 @@ opencode --version
 
 ### Step 2：Clone 配置仓库
 
-本仓库包含 skills、commands、instructions、oh-my-opencode.json 等，**不含密钥文件**。
-
 ```bash
 # 备份已有配置（如有）
 mv ~/.config/opencode ~/.config/opencode.bak 2>/dev/null
@@ -382,50 +397,34 @@ mv ~/.config/opencode ~/.config/opencode.bak 2>/dev/null
 git clone https://github.com/Joyu42/opencode.git ~/.config/opencode
 ```
 
-Clone 后目录结构：
-
-```
-~/.config/opencode/
-├── oh-my-opencode.json        # ❌ 插件自动创建手动修改Agent/Category 配置
-├── instructions/language.md    # ✅ 中文指令（已含）
-├── command/                    # ✅ 自定义命令（已含）
-├── skills/                     # ✅ 15 个技能包（已含）
-├── README.md                   # ✅ 本文件（已含）
-├── opencode.json               # ❌ 自动创建或手动创建（含密钥，不入库）
-└── supermemory.jsonc            # ❌ 插件自动创建需手动创建（含密钥，不入库）
-```
-
 ### Step 3：安装 Oh My OpenCode 插件
 
 ```markdown
-# 推荐方式：交互式安装器（会引导配置订阅）Copy and paste this prompt to your LLM agent (Claude Code, AmpCode, Cursor, etc.):
+# 推荐方式：交互式安装器
 Install and configure oh-my-opencode by following the instructions here:
 https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 
-安装器会询问你的订阅情况（Copilot / Claude / ChatGPT），并自动写入 `opencode.json` 的 `plugin` 字段。
-
-如果你已经 clone 了仓库且 `oh-my-opencode.json` 已存在，只需确保 `opencode.json` 的 `plugin` 数组包含 `"oh-my-opencode@latest"`。
-
-### Step 4：安装 Supermemory 插件
-
-1. 注册并获取 API Key：[console.supermemory.ai](https://console.supermemory.ai)（需 Pro 计划）
-
-2. 设置环境变量（可选，也可写在配置文件里）：
+### Step 4：安装 Superpowers 插件
 
 ```bash
-# 添加到 ~/.bashrc 或 ~/.zshrc
-export SUPERMEMORY_API_KEY="sm_你的密钥"
+# 1. Clone Superpowers
+git clone https://github.com/obra/superpowers.git ~/.config/opencode/superpowers
+
+# 2. 创建目录
+mkdir -p ~/.config/opencode/plugins ~/.config/opencode/skills
+
+# 3. 创建符号链接
+rm -f ~/.config/opencode/plugins/superpowers.js
+ln -s ~/.config/opencode/superpowers/.opencode/plugins/superpowers.js ~/.config/opencode/plugins/superpowers.js
+ln -s ~/.config/opencode/superpowers/skills ~/.config/opencode/skills/superpowers
 ```
 
-3. 安装插件：
+### Step 5：安装 Supermemory 插件
 
-```markdown
-# let your agent do it - paste this into OpenCode:
-Install opencode-supermemory by following https://raw.githubusercontent.com/supermemoryai/opencode-supermemory/main/README.md
-```
+1. 注册并获取 API Key：[console.supermemory.ai](https://console.supermemory.ai)
 
-4. 创建 `~/.config/opencode/supermemory.jsonc`：（可选，插件可能自动创建）
+2. 创建 `~/.config/opencode/supermemory.jsonc`：
 
 ```jsonc
 {
@@ -436,11 +435,7 @@ Install opencode-supermemory by following https://raw.githubusercontent.com/supe
 }
 ```
 
-> **重要**：使用 Supermemory 需禁用 `anthropic-context-window-limit-recovery` Hook，`oh-my-opencode.json` 中已配置。
-
-### Step 5： opencode.json（主配置）
-
-此文件含密钥，不入库：
+### Step 6：编辑 opencode.json
 
 ```bash
 cat > ~/.config/opencode/opencode.json << 'EOF'
@@ -473,15 +468,7 @@ cat > ~/.config/opencode/opencode.json << 'EOF'
 EOF
 ```
 
-**获取各 API Key**：
-
-| Key | 获取地址 |
-|-----|---------|
-| Context7 | [context7.com](https://context7.com) 注册后获取（免费） |
-| MiniMax (国内) | [platform.minimaxi.com](https://platform.minimaxi.com) → API 密钥 |
-| MiniMax (海外) | [minimax.io](https://minimax.io)（API Host 改为 `https://api.minimax.io`） |
-
-### Step 6：认证模型提供商
+### Step 7：认证模型提供商
 
 ```bash
 # 启动 OpenCode
@@ -489,24 +476,7 @@ opencode
 
 # 在 TUI 中使用 /connect 连接 GitHub Copilot
 # 按提示完成 OAuth 认证
-
-# 连接 MiniMax（如使用 minimax-cn provider）
-# 在 TUI 中 /connect → 选择 MiniMax → 输入 API Key
 ```
-
-认证信息保存在 `~/.local/share/opencode/auth.json`。
-
-### Step 7：验证安装
-
-```bash
-opencode
-```
-
-进入 TUI 后检查：
-
-- 输入 `ulw 你好` → Sisyphus 应以中文回复
-- 检查 Agent 列表：应能看到 Sisyphus、Oracle、Prometheus 等
-- MiniMax MCP 工具：web_search 和 understand_image 应可用
 
 ### 安装流程图
 
@@ -514,35 +484,35 @@ opencode
 1. 安装 OpenCode CLI
    ↓
 2. Clone 配置仓库 → ~/.config/opencode/
-   （获得 skills, commands,instructions）
    ↓
-3. bunx oh-my-opencode install
+3. oh-my-opencode install
    （安装 OhMyOpenCode 插件 + oh-my-opencode.json）
    ↓
-4. bunx opencode-supermemory@latest install
+4. 安装 Superpowers 插件
+   （Clone + 符号链接）
+   ↓
+5. opencode-supermemory install
    （安装 Supermemory 插件 + 创建 supermemory.jsonc）
    ↓
-5. 手动创建 opencode.json
-   （填入 Context7 / MiniMax API Key，声明插件和 MCP）
+6. 编辑 opencode.json
+   （填入 Context7 / MiniMax API Key）
    ↓
-6. opencode → /connect 认证 Copilot / MiniMax
+7. opencode → /connect 认证
    ↓
-7. 开始使用 ✅
+8. 开始使用 ✅
 ```
 
 ---
 
-## 7. 相关链接
+## 9. 相关链接
 
 - [OpenCode 官方文档](https://opencode.ai/docs/config/)
-- [OhMyOpenCode 官方文档](https://ohmyopencode.com/documentation/)
 - [OhMyOpenCode GitHub](https://github.com/code-yeongyu/oh-my-opencode)
-- [MiniMax Coding Plan MCP](https://github.com/MiniMax-AI/MiniMax-Coding-Plan-MCP)
-- [MiniMax 平台（国内）](https://platform.minimaxi.com)
-- [Supermemory 官方文档](https://supermemory.ai/docs/integrations/opencode)
+- [Superpowers GitHub](https://github.com/obra/superpowers)
 - [Supermemory Console](https://console.supermemory.ai)
+- [MiniMax 平台](https://platform.minimaxi.com)
 - [Context7 MCP](https://mcp.context7.com)
 
 ---
 
-*更新日期：2026-03-04*
+*更新日期：2026-03-06*

@@ -1,0 +1,1 @@
+/Users/Ng/.config/opencode/superpowers/.opencode/plugins/superpowers.js
