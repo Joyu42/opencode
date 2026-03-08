@@ -1,0 +1,9 @@
+node_modules
+package.json
+bun.lock
+opencode.json
+opencode.json.bak
+supermemory.jsonc
+oh-my-opencode.json
+antigravity-accounts.json
+*.bak
